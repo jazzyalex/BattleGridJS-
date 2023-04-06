@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BattleGrid</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        table {
+            border-collapse: collapse;
+        }
+
+        td {
+            border: 1px solid black;
+            width: 50px;
+            height: 50px;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 14px;
+        }
+
+        .selected {
+            background-color: #ffd700;
+        }
+
+        .help {
+            margin-left: 30px;
+            font-size: 16px;
+        }
+
+        .help p {
+            margin: 0 0 10px;
+        }
+
+        .help ul {
+            padding: 0;
+            margin: 0;
+            list-style-type: none;
+        }
+
+        .help li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <table>
+            <tbody>
+                <tr><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td></tr>
+            </tbody>
+        </table>
+        <div class="help">
+            <p><strong>Pieces:</strong></p>
+            <ul>
+                <li>C: Commander (1 move any direction)</li>
+                <li>K: Knight (L-shaped move)</li>
+                <li>A: Archer (1 move diagonally, attack 2 squares diagonally)</li>
+                <li>S: Soldier (1 move forward, capture diagonally forward)</li>
+            </ul>
+            <p><strong>Objective:</strong></p>
+            <p>Capture the opponent's Commander to win.</p>
+            <p><strong>Turns:</strong></p>
+            <p>Tap a piece to select it, then tap a valid destination square.</p>
+        </div>
+    </div>
+<script>
+    const board = [
+        ['C', 'K', 'A', 'S'],
+        ['', '', '', ''],
+        ['', '', '', ''],
+        ['s', 'a', 'k', 'c'],
+    ];
+
+    const displayBoard = () => {
+        const tbody = document.querySelector('tbody');
+        tbody.innerHTML = '';
+
+        board.forEach(row => {
+            const tr = document.createElement('tr');
+            row.forEach(cell => {
+                const td = document.createElement('td');
+                td.textContent = cell;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    };
+
+    const getCoordinates = (element) => {
+        const rowIndex = Array.from(element.parentNode.parentNode.children).indexOf(element.parentNode);
+        const cellIndex = Array.from(element.parentNode.children).indexOf(element);
+        return { x: cellIndex, y: rowIndex };
+    };
+
+    const isValidMove = (start, end, piece) => {
+        const dx = Math.abs(end.x - start.x);
+const dy = Math.abs(end.y - start.y);
+const targetPiece = board[end.y][end.x];
+const isOpponentPiece = targetPiece !== '' && (piece.toUpperCase() === piece) !== (targetPiece.toUpperCase() === targetPiece);
+
+switch (piece.toLowerCase()) {
+    case 'c':
+        return (dx <= 1 && dy <= 1) && (!targetPiece || isOpponentPiece);
+    case 'k':
+        return ((dx === 2 && dy === 1) || (dx === 1 && dy === 2)) && (!targetPiece || isOpponentPiece);
+    case 'a':
+        if (dx === 1 && dy === 1) {
+            return !targetPiece || isOpponentPiece;
+        }
+        if (dx === 2 && dy === 2) {
+            const middleX = (start.x + end.x) / 2;
+            const middleY = (start.y + end.y) / 2;
+            return board[middleY][middleX] === '' && (!targetPiece || isOpponentPiece);
+        }
+        return false;
+    case 's':
+        const forward = piece === 'S' ? -1 : 1;
+        if (dx === 0 && dy === forward) {
+            return !targetPiece;
+        }
+        if (dx === 1 && dy === forward) {
+            return isOpponentPiece;
+        }
+        return false;
+    default:
+        return false;
+}
+
+};
+
+const isGameOver = () => {
+const commanders = board.reduce((count, row) => {
+    row.forEach(cell => {
+        if (cell === 'C' || cell === 'c') {
+            count[cell]++;
+        }
+    });
+    return count;
+}, { 'C': 0, 'c': 0 });
+
+if (commanders.C === 0) {
+    alert("Player 2 wins!");
+    return true;
+}
+if (commanders.c === 0) {
+    alert("Player 1 wins!");
+    return true;
+}
+return false;
+};
+let selectedCell = null;
+
+document.querySelector('tbody').addEventListener('click', (event) => {
+    if (event.target.tagName !== 'TD') return;
+
+    if (selectedCell) {
+        const { x: startX, y: startY } = getCoordinates(selectedCell);
+        const { x: endX, y: endY } = getCoordinates(event.target);
+        const piece = board[startY][startX];
+
+        if (isValidMove({ x: startX, y: startY }, { x: endX, y: endY }, piece)) {
+            board[startY][startX] = '';
+            board[endY][endX] = piece;
+            displayBoard();
+
+            if (isGameOver()) {
+                // Reset the game.
+                board = [
+                    ['C', 'K', 'A', 'S'],
+                    ['', '', '', ''],
+                    ['', '', '', ''],
+                    ['s', 'a', 'k', 'c'],
+                ];
+                displayBoard();
+            }
+        }
+
+        selectedCell.classList.remove('selected');
+        selectedCell = null;
+    } else {
+        const coords = getCoordinates(event.target);
+        if (board[coords.y][coords.x] !== '') {
+            selectedCell = event.target;
+            selectedCell.classList.add('selected');
+        }
+    }
+});
+
+displayBoard();
+</script>
+
+
